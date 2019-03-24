@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
+"""Simulation of a vehicle.
+
 """
-Created on Mon Jan  2 16:10:58 2017
 
-@author: steven
-"""
-
-
-import bms
+from bms import Variable, PhysicalSystem
 from bms.physical.mechanical import ThermalEngine, Wheel, RotationalNode, TranslationalNode, Brake, Clutch, GearRatio
 from bms.blocks.continuous import WeightedSum, Gain
 from bms.blocks.nonlinear import Saturation
 from bms.signals.wltp import WLTP1
-#from bms.signals.functions import Step
+
 
 Vt = WLTP1('Target speed WLTP1')  # Targeted Speed
 SCx = 0.29*2
@@ -59,16 +57,16 @@ wheels = Wheel(shaft_gb2, vehicle, r)
 
 # Commands
 subs1 = WeightedSum([Vt, vehicle.variable], engine.commands[0], [Ge, -Ge])
-v1 = bms.Variable('', hidden=True)
+v1 = Variable('', hidden=True)
 subs2 = WeightedSum([Vt, vehicle.variable], v1, [-Gb, Gb], -Vb)
 sat1 = Saturation(v1, brake.commands[0], 0, 1)
 
 # clutch
-cc = bms.Variable('Clutch command')
+cc = Variable('Clutch command')
 gc = Gain(crankshaft.variable, cc, 1/(wrc-wec), wec/(wec-wrc))
 satc = Saturation(cc, clutch.commands[0], 0, 1)
 
-ps = bms.PhysicalSystem(600, 600, [engine, gr1, clutch, wheels, brake], [
+ps = PhysicalSystem(600, 600, [engine, gr1, clutch, wheels, brake], [
                         subs1, subs2, sat1, gc, satc])
 ds = ps.dynamic_system
 
