@@ -186,7 +186,7 @@ class DynamicSystem:
 
     """
 
-    def __init__(self, te, ns, blocks=[]):
+    def __init__(self, te, ns, blocks=[], signals=[]):
         self.te = te
         self.ns = ns
         self.ts = self.te/float(self.ns)  # time step
@@ -199,6 +199,8 @@ class DynamicSystem:
 
         for block in blocks:
             self.AddBlock(block)
+        for signal in signals:
+            self._AddVariable(signal)
 
         self._utd_graph = False  # True if graph is up-to-date
 

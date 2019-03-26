@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """Testing the derivative of a sine function.
@@ -14,37 +13,69 @@ from bms.blocks.continuous import Gain, DifferentiationBlock
 import numpy as np
 
 
-amplitude = 3
-w = 2 * np.pi
-phase = np.pi / 2
-offset = 1.5
+# properties of the sine wave
+amplitude_sine = 3
+w_sine = 2 * np.pi
+phase_sine = np.pi / 2
+offset_sine = 1.5
 
-amplitude_dsignal = amplitude * w
+# properties of the derivative of the sine wave
+amplitude_dsine = amplitude_sine * w_sine
+w_dsine = -w_sine
+phase_dsine = np.pi/2 - phase_sine
+offset_dsine = 0
 
-signal = Sinus(f'f = {amplitude} * sin({w:.2f}*t + {phase:.2f}) + {offset}',
-    amplitude=amplitude, w=w, phase=phase, offset = 1.5)
-dsignal_sim = Variable('df/dt (sim)')
-dsignal_calc_signal = Sinus('df/dt calc', amplitude=amplitude_dsignal, w=-w, phase=np.pi/2 - phase, offset=0)
-dsignal_calc = Variable('df/dt (calc)')
+# defining the sine wave
+sine = Sinus(f'f = {amplitude_sine} * sin({w_sine:.2f}*t + {phase_sine:.2f}) + {offset_sine}',
+    amplitude=amplitude_sine, w=w_sine, phase=phase_sine, offset=offset_sine)
+# definining its derivative - calculated analytically
+dsine_calc = Sinus('df/dt (calc)', amplitude=amplitude_dsine, w=w_dsine, phase=phase_dsine, offset=offset_dsine)
+signals = [dsine_calc]
 
+# defining the variable that will hold the simulated result of the derivative
+dsine_sim = Variable('df/dt (sim)')
+
+
+# defining blocks
 blocks = []
-blocks.append(DifferentiationBlock(signal, dsignal_sim))
-blocks.append(Gain(dsignal_calc_signal, dsignal_calc, 1))
+blocks.append(DifferentiationBlock(sine, dsine_sim))
 
+# defining and running the system
 steps_second = 100
-time = 10
-ds = DynamicSystem(time, time*steps_second, blocks)
+time = 5
+ds = DynamicSystem(time, time*steps_second, blocks, signals)
 ds.Simulate()
 
 
 # verification
-def test_signal_bounds():
-    assert np.max(signal.values) <= amplitude + offset
-    assert np.min(signal.values) >= -amplitude + offset
+def test_sine_bounds():
+    assert np.max(sine.values) <= amplitude_sine + offset_sine
+    assert np.min(sine.values) >= -amplitude_sine + offset_sine
 
-def test_simulated_dsignal_bounds():
-    assert np.max(dsignal_sim.values) <= amplitude_dsignal
-    assert np.min(dsignal_sim.values) >= -amplitude_dsignal
+def test_simulated_dsine_bounds():
+    assert np.max(dsine_sim.values) <= amplitude_dsine
+    assert np.min(dsine_sim.values) >= -amplitude_dsine
 
-def test_difference_simulated_calculated_dsignal():
-    assert np.max(np.abs(dsignal_sim.values[:] - dsignal_calc.values[:])) < amplitude_dsignal / 25
+def test_difference_simulated_calculated_dsine():
+    assert np.max(np.abs(dsine_sim.values - dsine_calc.values)) < amplitude_dsine / 25
+
+def test_dsine_zero_value():
+    if w_dsine > 0:
+        def test_phase(phase):
+            return phase >= 0
+        def increment(phase):
+            return phase + np.pi
+    else:
+        def test_phase(phase):
+            return phase <= 0
+        def increment(phase):
+            return phase - np.pi
+
+    is_zero_dphase = 0 - phase_dsine
+    while not test_phase(is_zero_dphase):
+        is_zero_dphase = increment(is_zero_dphase)
+    is_zero_dphase = increment(is_zero_dphase)
+    is_zero_time = is_zero_dphase / w_dsine
+    is_zero_index = int(is_zero_time * steps_second)
+
+    assert np.abs(dsine_sim.values[is_zero_index]) < amplitude_dsine / 25
